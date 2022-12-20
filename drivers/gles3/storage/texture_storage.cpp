@@ -690,6 +690,15 @@ void TextureStorage::texture_proxy_initialize(RID p_texture, RID p_base) {
 	texture_owner.initialize_rid(p_texture, proxy_tex);
 }
 
+void TextureStorage::texture_external_oes_initialize(RID p_texture) {
+    Texture texture;
+    texture.type = Texture::TYPE_EXTERNAL_OES;
+    texture.target = _GL_TEXTURE_EXTERNAL_OES;
+    texture.active = true;
+    glGenTextures(1, &texture.tex_id);
+    texture_owner.initialize_rid(p_texture, texture);
+}
+
 RID TextureStorage::texture_create_external(Texture::Type p_type, Image::Format p_format, unsigned int p_image, int p_width, int p_height, int p_depth, int p_layers, RS::TextureLayeredType p_layered_type) {
 	Texture texture;
 	texture.active = true;

@@ -146,7 +146,8 @@ struct Texture {
 	enum Type {
 		TYPE_2D,
 		TYPE_LAYERED,
-		TYPE_3D
+		TYPE_3D,
+        TYPE_EXTERNAL_OES
 	};
 
 	Type type;
@@ -472,6 +473,7 @@ public:
 	virtual void texture_2d_layered_initialize(RID p_texture, const Vector<Ref<Image>> &p_layers, RS::TextureLayeredType p_layered_type) override;
 	virtual void texture_3d_initialize(RID p_texture, Image::Format, int p_width, int p_height, int p_depth, bool p_mipmaps, const Vector<Ref<Image>> &p_data) override;
 	virtual void texture_proxy_initialize(RID p_texture, RID p_base) override; //all slices, then all the mipmaps, must be coherent
+    virtual void texture_external_oes_initialize(RID p_texture) override;
 
 	RID texture_create_external(Texture::Type p_type, Image::Format p_format, unsigned int p_image, int p_width, int p_height, int p_depth, int p_layers, RS::TextureLayeredType p_layered_type = RS::TEXTURE_LAYERED_2D_ARRAY);
 

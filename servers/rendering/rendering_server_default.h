@@ -180,6 +180,7 @@ public:
 	FUNCRIDTEX2(texture_2d_layered, const Vector<Ref<Image>> &, TextureLayeredType)
 	FUNCRIDTEX6(texture_3d, Image::Format, int, int, int, bool, const Vector<Ref<Image>> &)
 	FUNCRIDTEX1(texture_proxy, RID)
+    FUNCRIDTEX0(texture_external_oes)
 
 	//these go through command queue if they are in another thread
 	FUNC3(texture_2d_update, RID, const Ref<Image> &, int)
@@ -213,6 +214,7 @@ public:
 
 	FUNC2(texture_set_force_redraw_if_visible, RID, bool)
 	FUNC2RC(RID, texture_get_rd_texture_rid, RID, bool)
+    FUNC1RC(uint32_t, texture_get_texid, RID)
 
 	/* SHADER API */
 

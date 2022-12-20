@@ -1031,6 +1031,10 @@ void TextureStorage::texture_proxy_initialize(RID p_texture, RID p_base) {
 	tex->proxies.push_back(p_texture);
 }
 
+void TextureStorage::texture_external_oes_initialize(RID p_texture) {
+    // not implemented
+}
+
 void TextureStorage::_texture_2d_update(RID p_texture, const Ref<Image> &p_image, int p_layer, bool p_immediate) {
 	ERR_FAIL_COND(p_image.is_null() || p_image->is_empty());
 
@@ -1355,6 +1359,12 @@ RID TextureStorage::texture_get_rd_texture_rid(RID p_texture, bool p_srgb) const
 	ERR_FAIL_COND_V(!tex, RID());
 
 	return (p_srgb && tex->rd_texture_srgb.is_valid()) ? tex->rd_texture_srgb : tex->rd_texture;
+}
+
+
+uint32_t TextureStorage::texture_get_texid(RID p_texture) const {
+    // not implemented
+    return 0;
 }
 
 Ref<Image> TextureStorage::_validate_texture_format(const Ref<Image> &p_image, TextureToRDFormat &r_format) {

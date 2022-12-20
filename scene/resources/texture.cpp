@@ -3359,6 +3359,58 @@ CameraTexture::~CameraTexture() {
 
 ///////////////////////////
 
+void ExternalTextureOES::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("set_size", "size"), &ExternalTextureOES::set_size);
+    ClassDB::bind_method(D_METHOD("get_external_texture_id"), &ExternalTextureOES::get_external_texture_id);
+
+    ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "size"), "set_size", "get_size");
+}
+
+uint32_t ExternalTextureOES::get_external_texture_id() {
+    return RS::get_singleton()->texture_get_texid(texture);
+}
+
+void ExternalTextureOES::set_size(const Size2 &p_size) {
+    if (p_size.width > 0 && p_size.height > 0) {
+        size = p_size;
+//        VisualServer::get_singleton()->texture_set_size_override(texture, size.width, size.height, 0);
+    }
+}
+
+int ExternalTextureOES::get_width() const {
+    return size.width;
+}
+
+int ExternalTextureOES::get_height() const {
+    return size.height;
+}
+
+Size2 ExternalTextureOES::get_size() const {
+    return size;
+}
+
+RID ExternalTextureOES::get_rid() const {
+    return texture;
+}
+
+bool ExternalTextureOES::has_alpha() const {
+    return true;
+}
+
+
+ExternalTextureOES::ExternalTextureOES() {
+    size = Size2(1.0, 1.0);
+    texture = RS::get_singleton()->texture_external_oes_create();
+    notify_property_list_changed();
+    emit_changed();
+}
+
+ExternalTextureOES::~ExternalTextureOES() {
+    RS::get_singleton()->free(texture);
+}
+
+///////////////////////////
+
 void PlaceholderTexture2D::set_size(Size2 p_size) {
 	size = p_size;
 }

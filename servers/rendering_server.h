@@ -106,6 +106,7 @@ public:
 	virtual RID texture_2d_layered_create(const Vector<Ref<Image>> &p_layers, TextureLayeredType p_layered_type) = 0;
 	virtual RID texture_3d_create(Image::Format, int p_width, int p_height, int p_depth, bool p_mipmaps, const Vector<Ref<Image>> &p_data) = 0; //all slices, then all the mipmaps, must be coherent
 	virtual RID texture_proxy_create(RID p_base) = 0;
+    virtual RID texture_external_oes_create() = 0;
 
 	virtual void texture_2d_update(RID p_texture, const Ref<Image> &p_image, int p_layer = 0) = 0;
 	virtual void texture_3d_update(RID p_texture, const Vector<Ref<Image>> &p_data) = 0;
@@ -158,6 +159,7 @@ public:
 	virtual void texture_set_force_redraw_if_visible(RID p_texture, bool p_enable) = 0;
 
 	virtual RID texture_get_rd_texture_rid(RID p_texture, bool p_srgb = false) const = 0;
+    virtual uint32_t texture_get_texid(RID p_texture) const = 0;
 
 	/* SHADER API */
 
