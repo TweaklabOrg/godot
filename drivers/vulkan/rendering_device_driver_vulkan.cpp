@@ -536,6 +536,13 @@ Error RenderingDeviceDriverVulkan::_initialize_device_extensions() {
 	_register_requested_device_extension(VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_EXT_TEXTURE_COMPRESSION_ASTC_HDR_EXTENSION_NAME, false);
 
+	_register_requested_device_extension(VK_KHR_VIDEO_DECODE_QUEUE_EXTENSION_NAME, false);
+	_register_requested_device_extension(VK_KHR_VIDEO_DECODE_AV1_EXTENSION_NAME, false);
+	_register_requested_device_extension(VK_KHR_VIDEO_DECODE_VP9_EXTENSION_NAME, false);
+	_register_requested_device_extension(VK_KHR_VIDEO_QUEUE_EXTENSION_NAME, false);
+	_register_requested_device_extension(VK_KHR_VIDEO_DECODE_H264_EXTENSION_NAME, false);
+	_register_requested_device_extension(VK_KHR_VIDEO_DECODE_H265_EXTENSION_NAME, false);
+
 	// We don't actually use this extension, but some runtime components on some platforms
 	// can and will fill the validation layers with useless info otherwise if not enabled.
 	_register_requested_device_extension(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME, false);
@@ -1047,7 +1054,7 @@ Error RenderingDeviceDriverVulkan::_add_queue_create_info(LocalVector<VkDeviceQu
 	uint32_t queue_family_count = queue_family_properties.size();
 	queue_families.resize(queue_family_count);
 
-	VkQueueFlags queue_flags_mask = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT;
+	VkQueueFlags queue_flags_mask = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT | VK_QUEUE_VIDEO_DECODE_BIT_KHR;
 	const uint32_t max_queue_count_per_family = 1;
 	static const float queue_priorities[max_queue_count_per_family] = {};
 	for (uint32_t i = 0; i < queue_family_count; i++) {
@@ -1200,6 +1207,10 @@ Error RenderingDeviceDriverVulkan::_initialize_device(const LocalVector<VkDevice
 	create_info.enabledExtensionCount = enabled_extension_names.size();
 	create_info.ppEnabledExtensionNames = enabled_extension_names.ptr();
 	create_info.pEnabledFeatures = &requested_device_features;
+
+	// for (const auto e: enabled_extension_names) {
+	// 	print_line("enabled extension ", e);
+	// }
 
 	if (VulkanHooks::get_singleton() != nullptr) {
 		bool device_created = VulkanHooks::get_singleton()->create_vulkan_device(&create_info, &vk_device);
