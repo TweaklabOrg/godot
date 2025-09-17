@@ -536,12 +536,15 @@ Error RenderingDeviceDriverVulkan::_initialize_device_extensions() {
 	_register_requested_device_extension(VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_EXT_TEXTURE_COMPRESSION_ASTC_HDR_EXTENSION_NAME, false);
 
+	_register_requested_device_extension(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_KHR_VIDEO_DECODE_QUEUE_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_KHR_VIDEO_DECODE_AV1_EXTENSION_NAME, false);
 	// _register_requested_device_extension(VK_KHR_VIDEO_DECODE_VP9_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_KHR_VIDEO_QUEUE_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_KHR_VIDEO_DECODE_H264_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_KHR_VIDEO_DECODE_H265_EXTENSION_NAME, false);
+	_register_requested_device_extension(VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME, false);
+	_register_requested_device_extension(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME, false);
 
 	// We don't actually use this extension, but some runtime components on some platforms
 	// can and will fill the validation layers with useless info otherwise if not enabled.
@@ -775,6 +778,9 @@ Error RenderingDeviceDriverVulkan::_check_device_capabilities() {
 		if (use_1_2_features) {
 			device_features_vk_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
 			device_features_vk_1_2.pNext = next_features;
+			if (enabled_device_extension_names.has(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME)) {
+				device_features_vk_1_2.timelineSemaphore = true;
+			}
 			next_features = &device_features_vk_1_2;
 		} else {
 			if (enabled_device_extension_names.has(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME)) {
