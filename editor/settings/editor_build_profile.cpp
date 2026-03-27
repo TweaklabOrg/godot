@@ -40,6 +40,7 @@
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
 #include "scene/gui/line_edit.h"
+#include "scene/gui/margin_container.h"
 #include "scene/gui/separator.h"
 
 #include "modules/modules_enabled.gen.h" // For mono.
@@ -243,7 +244,7 @@ const HashMap<EditorBuildProfile::BuildOption, LocalVector<String>> EditorBuildP
 			"NavigationAgent2D",
 			"NavigationLink2D",
 			"NavigationMeshSourceGeometryData2D",
-			"NavigationObstacle2D"
+			"NavigationObstacle2D",
 			"NavigationPolygon",
 			"NavigationRegion2D",
 	} },
@@ -301,8 +302,6 @@ const HashMap<EditorBuildProfile::BuildOption, LocalVector<String>> EditorBuildP
 			"RayCast3D",
 			"SoftBody3D",
 			"SpringArm3D",
-			"SpringBoneCollision3D",
-			"SpringBoneSimulator3D",
 			"VehicleWheel3D",
 	} },
 	{ BUILD_OPTION_TEXT_SERVER_ADVANCED, {
@@ -629,20 +628,24 @@ EditorBuildProfile::EditorBuildProfile() {
 		{ "xr/openxr/enabled", { true } },
 	};
 	build_option_settings.insert(BUILD_OPTION_OPENXR, settings_openxr);
+
 	HashMap<String, LocalVector<Variant>> settings_wayland = {
 		{ "display/display_server/driver.linuxbsd", { "default", "wayland" } },
 	};
-	build_option_settings.insert(BUILD_OPTION_OPENXR, settings_wayland);
+	build_option_settings.insert(BUILD_OPTION_WAYLAND, settings_wayland);
+
 	HashMap<String, LocalVector<Variant>> settings_x11 = {
 		{ "display/display_server/driver.linuxbsd", { "default", "x11" } },
 	};
-	build_option_settings.insert(BUILD_OPTION_OPENXR, settings_x11);
+	build_option_settings.insert(BUILD_OPTION_X11, settings_x11);
+
 	HashMap<String, LocalVector<Variant>> settings_rd = {
 		{ "rendering/renderer/rendering_method", { "forward_plus", "mobile" } },
 		{ "rendering/renderer/rendering_method.mobile", { "forward_plus", "mobile" } },
 		{ "rendering/renderer/rendering_method.web", { "forward_plus", "mobile" } },
 	};
 	build_option_settings.insert(BUILD_OPTION_RENDERING_DEVICE, settings_rd);
+
 	HashMap<String, LocalVector<Variant>> settings_vulkan = {
 		{ "rendering/rendering_device/driver", { "vulkan" } },
 		{ "rendering/rendering_device/driver.windows", { "vulkan" } },
@@ -653,6 +656,7 @@ EditorBuildProfile::EditorBuildProfile() {
 		{ "rendering/rendering_device/fallback_to_vulkan", { true } },
 	};
 	build_option_settings.insert(BUILD_OPTION_VULKAN, settings_vulkan);
+
 	HashMap<String, LocalVector<Variant>> settings_d3d12 = {
 		{ "rendering/rendering_device/driver", { "d3d12" } },
 		{ "rendering/rendering_device/driver.windows", { "d3d12" } },
@@ -662,13 +666,15 @@ EditorBuildProfile::EditorBuildProfile() {
 		{ "rendering/rendering_device/driver.macos", { "d3d12" } },
 		{ "rendering/rendering_device/fallback_to_d3d12", { true } },
 	};
-	build_option_settings.insert(BUILD_OPTION_VULKAN, settings_vulkan);
+	build_option_settings.insert(BUILD_OPTION_D3D12, settings_d3d12);
+
 	HashMap<String, LocalVector<Variant>> settings_metal = {
 		{ "rendering/rendering_device/driver", { "metal" } },
 		{ "rendering/rendering_device/driver.ios", { "metal" } },
 		{ "rendering/rendering_device/driver.macos", { "metal" } },
 	};
 	build_option_settings.insert(BUILD_OPTION_METAL, settings_metal);
+
 	HashMap<String, LocalVector<Variant>> settings_opengl = {
 		{ "rendering/renderer/rendering_method", { "gl_compatibility" } },
 		{ "rendering/renderer/rendering_method.mobile", { "gl_compatibility" } },
@@ -676,14 +682,17 @@ EditorBuildProfile::EditorBuildProfile() {
 		{ "rendering/rendering_device/fallback_to_opengl3", { true } },
 	};
 	build_option_settings.insert(BUILD_OPTION_OPENGL, settings_opengl);
+
 	HashMap<String, LocalVector<Variant>> settings_phy_godot_3d = {
 		{ "physics/3d/physics_engine", { "DEFAULT", "GodotPhysics3D" } },
 	};
 	build_option_settings.insert(BUILD_OPTION_PHYSICS_GODOT_3D, settings_phy_godot_3d);
+
 	HashMap<String, LocalVector<Variant>> settings_jolt = {
 		{ "physics/3d/physics_engine", { "Jolt Physics" } },
 	};
 	build_option_settings.insert(BUILD_OPTION_PHYSICS_JOLT, settings_jolt);
+
 	HashMap<String, LocalVector<Variant>> settings_msdfgen = {
 		{ "gui/theme/default_font_multichannel_signed_distance_field", { true } },
 	};
@@ -891,7 +900,20 @@ void EditorBuildProfileManager::_detect_from_project() {
 
 	// Add classes that are either necessary for the engine to work properly, or there isn't a way to infer their use.
 
-	const LocalVector<String> hardcoded_classes = { "InputEvent", "MainLoop", "StyleBox" };
+	// HACK: Some classes are included due to creating clashes with unrelated when disabled.
+	// Until that is fixed, they need to always be enabled.
+	const LocalVector<String> hardcoded_classes = {
+		"Font",
+		"InputEvent",
+		"MainLoop",
+		"Mutex",
+		"ShaderInclude",
+		"ShaderIncludeDB",
+		"StyleBox",
+		"Time",
+		"Window",
+	};
+
 	for (const String &hc_class : hardcoded_classes) {
 		used_classes.insert(hc_class);
 
@@ -944,20 +966,20 @@ void EditorBuildProfileManager::_detect_from_project() {
 
 	edited->clear_disabled_classes();
 
-	List<StringName> all_classes;
-	ClassDB::get_class_list(&all_classes);
+	LocalVector<StringName> all_classes;
+	ClassDB::get_class_list(all_classes);
 
-	for (const StringName &E : all_classes) {
-		if (String(E).begins_with("Editor") || ClassDB::get_api_type(E) != ClassDB::API_CORE || all_used_classes.has(E)) {
+	for (const StringName &class_name : all_classes) {
+		if (String(class_name).begins_with("Editor") || ClassDB::get_api_type(class_name) != ClassDB::API_CORE || all_used_classes.has(class_name)) {
 			// This class is valid or editor-only, do nothing.
 			continue;
 		}
 
-		StringName p = ClassDB::get_parent_class(E);
+		StringName p = ClassDB::get_parent_class(class_name);
 		if (!p || all_used_classes.has(p)) {
 			// If no parent, or if the parent is enabled, then add to disabled classes.
 			// This way we avoid disabling redundant classes.
-			edited->set_disable_class(E, true);
+			edited->set_disable_class(class_name, true);
 		}
 	}
 
@@ -1328,11 +1350,15 @@ EditorBuildProfileManager::EditorBuildProfileManager() {
 	class_list->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
 	class_list->set_hide_root(true);
 	class_list->set_edit_checkbox_cell_only_when_checkbox_is_pressed(true);
+	class_list->set_scroll_hint_mode(Tree::SCROLL_HINT_MODE_BOTH);
 	class_list->connect("cell_selected", callable_mp(this, &EditorBuildProfileManager::_class_list_item_selected));
 	class_list->connect("item_edited", callable_mp(this, &EditorBuildProfileManager::_class_list_item_edited), CONNECT_DEFERRED);
 	class_list->connect("item_collapsed", callable_mp(this, &EditorBuildProfileManager::_class_list_item_collapsed));
+
 	// It will be displayed once the user creates or chooses a profile.
-	main_vbc->add_margin_child(TTR("Configure Engine Compilation Profile:"), class_list, true);
+	MarginContainer *mc = main_vbc->add_margin_child(TTRC("Configure Engine Compilation Profile:"), class_list, true);
+	mc->set_theme_type_variation("NoBorderHorizontalWindow");
+	mc->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 
 	description_bit = memnew(EditorHelpBit);
 	description_bit->set_content_height_limits(80 * EDSCALE, 80 * EDSCALE);

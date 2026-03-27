@@ -306,7 +306,7 @@ class TextServerFallback : public TextServerExtension {
 		HashMap<String, bool> script_support_overrides;
 
 		PackedByteArray data;
-		const uint8_t *data_ptr;
+		const uint8_t *data_ptr = nullptr;
 		size_t data_size;
 		int face_index = 0;
 
@@ -412,6 +412,7 @@ class TextServerFallback : public TextServerExtension {
 
 	struct TextRun {
 		Vector2i range;
+		Vector2i gl_range;
 		RID font_rid;
 		int font_size = 0;
 		int64_t span_index = -1;
@@ -458,7 +459,7 @@ class TextServerFallback : public TextServerExtension {
 			Rect2 rect;
 			double baseline = 0;
 		};
-		HashMap<Variant, EmbeddedObject, VariantHasher, VariantComparator> objects;
+		HashMap<Variant, EmbeddedObject> objects;
 
 		/* Shaped data */
 		TextServer::Direction para_direction = DIRECTION_LTR; // Detected text direction.
@@ -616,6 +617,7 @@ public:
 	MODBIND0RC(String, get_support_data_info);
 	MODBIND1RC(bool, save_support_data, const String &);
 	MODBIND0RC(PackedByteArray, get_support_data);
+	MODBIND1RC(bool, is_locale_using_support_data, const String &);
 
 	MODBIND1RC(bool, is_locale_right_to_left, const String &);
 
@@ -811,6 +813,7 @@ public:
 	MODBIND2R(RID, create_shaped_text, Direction, Orientation);
 
 	MODBIND1(shaped_text_clear, const RID &);
+	MODBIND1R(RID, shaped_text_duplicate, const RID &);
 
 	MODBIND2(shaped_text_set_direction, const RID &, Direction);
 	MODBIND1RC(Direction, shaped_text_get_direction, const RID &);
@@ -839,6 +842,7 @@ public:
 	MODBIND7R(bool, shaped_text_add_string, const RID &, const String &, const TypedArray<RID> &, int64_t, const Dictionary &, const String &, const Variant &);
 	MODBIND6R(bool, shaped_text_add_object, const RID &, const Variant &, const Size2 &, InlineAlignment, int64_t, double);
 	MODBIND5R(bool, shaped_text_resize_object, const RID &, const Variant &, const Size2 &, InlineAlignment, double);
+	MODBIND2RC(bool, shaped_text_has_object, const RID &, const Variant &);
 	MODBIND1RC(String, shaped_get_text, const RID &);
 
 	MODBIND1RC(int64_t, shaped_get_span_count, const RID &);
@@ -851,6 +855,7 @@ public:
 	MODBIND1RC(int64_t, shaped_get_run_count, const RID &);
 	MODBIND2RC(String, shaped_get_run_text, const RID &, int64_t);
 	MODBIND2RC(Vector2i, shaped_get_run_range, const RID &, int64_t);
+	MODBIND2RC(Vector2i, shaped_get_run_glyph_range, const RID &, int64_t);
 	MODBIND2RC(RID, shaped_get_run_font_rid, const RID &, int64_t);
 	MODBIND2RC(int, shaped_get_run_font_size, const RID &, int64_t);
 	MODBIND2RC(String, shaped_get_run_language, const RID &, int64_t);

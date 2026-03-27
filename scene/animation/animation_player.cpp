@@ -277,6 +277,9 @@ void AnimationPlayer::_blend_playback_data(double p_delta, bool p_started) {
 	// Finally, if not end the animation, do blending.
 	if (end_reached) {
 		playback.blend.clear();
+		if (end_notify) {
+			finished_anim = playback.assigned;
+		}
 		return;
 	}
 	List<List<Blend>::Element *> to_erase;
@@ -306,6 +309,8 @@ bool AnimationPlayer::_blend_pre_process(double p_delta, int p_track_count, cons
 	end_reached = false;
 	end_notify = false;
 
+	finished_anim = StringName();
+
 	bool started = playback.started; // The animation may be changed during process, so it is safer that the state is changed before process.
 	if (playback.started) {
 		playback.started = false;
@@ -329,7 +334,17 @@ void AnimationPlayer::_blend_post_process() {
 	if (end_reached) {
 		// If the method track changes current animation, the animation is not finished.
 		if (tmp_from == playback.current.from->animation->get_instance_id()) {
-			if (playback_queue.size()) {
+			if (!playback_queue.is_empty()) {
+				if (!finished_anim.is_empty()) {
+					emit_signal(SceneStringName(animation_finished), finished_anim);
+					// Abort if playback_queue is cleared by animation_finished signal.
+					if (playback_queue.is_empty()) {
+						end_reached = false;
+						end_notify = false;
+						tmp_from = ObjectID();
+						return;
+					}
+				}
 				String old = playback.assigned;
 				play(playback_queue.front()->get());
 				String new_name = playback.assigned;
@@ -342,7 +357,9 @@ void AnimationPlayer::_blend_post_process() {
 				playing = false;
 				_set_process(false);
 				if (end_notify) {
-					emit_signal(SceneStringName(animation_finished), playback.assigned);
+					if (!finished_anim.is_empty()) {
+						emit_signal(SceneStringName(animation_finished), finished_anim);
+					}
 					emit_signal(SNAME("current_animation_changed"), "");
 					if (movie_quit_on_finish && OS::get_singleton()->has_feature("movie")) {
 						print_line(vformat("Movie Maker mode is enabled. Quitting on animation finish as requested by: %s", get_path()));
@@ -365,8 +382,8 @@ void AnimationPlayer::queue(const StringName &p_name) {
 	}
 }
 
-Vector<String> AnimationPlayer::get_queue() {
-	Vector<String> ret;
+TypedArray<StringName> AnimationPlayer::get_queue() {
+	TypedArray<StringName> ret;
 	for (const StringName &E : playback_queue) {
 		ret.push_back(E);
 	}
@@ -505,10 +522,10 @@ void AnimationPlayer::play_section(const StringName &p_name, double p_start_time
 		c.assigned = name;
 		emit_signal(SNAME("current_animation_changed"), c.assigned);
 	} else {
-		if (p_from_end && Math::is_equal_approx(c.current.pos, start)) {
+		if (p_from_end && Animation::is_less_or_equal_approx(c.current.pos, start)) {
 			// Animation reset but played backwards, set position to the end.
 			seek_internal(end, true, true, true);
-		} else if (!p_from_end && Math::is_equal_approx(c.current.pos, end)) {
+		} else if (!p_from_end && Animation::is_greater_or_equal_approx(c.current.pos, end)) {
 			// Animation resumed but already ended, set position to the beginning.
 			seek_internal(start, true, true, true);
 		} else if (playing) {
@@ -579,9 +596,14 @@ bool AnimationPlayer::is_playing() const {
 	return playing;
 }
 
-void AnimationPlayer::set_current_animation(const String &p_animation) {
-	if (p_animation == "[stop]" || p_animation.is_empty()) {
-		stop();
+void AnimationPlayer::set_current_animation(const StringName &p_animation) {
+	if (p_animation == SNAME("[stop]") || p_animation.is_empty()) {
+		// It should be call deferred and handled only when is_playing() == true to prevent infinite loops caused by seeking within stop().
+		// Especially when the key current_animation = "[stop]" is placed at the beginning of an animation,
+		// this line is called when the animation changes, so is_playing() == true must be checked.
+		if (is_playing()) {
+			callable_mp(this, &AnimationPlayer::stop).call_deferred(false);
+		}
 	} else if (!is_playing()) {
 		play(p_animation);
 	} else if (playback.assigned != p_animation) {
@@ -592,16 +614,16 @@ void AnimationPlayer::set_current_animation(const String &p_animation) {
 	}
 }
 
-String AnimationPlayer::get_current_animation() const {
-	return (is_playing() ? playback.assigned : "");
+StringName AnimationPlayer::get_current_animation() const {
+	return (is_playing() ? playback.assigned : StringName());
 }
 
-void AnimationPlayer::set_assigned_animation(const String &p_animation) {
+void AnimationPlayer::set_assigned_animation(const StringName &p_animation) {
 	if (is_playing()) {
 		float speed = playback.current.speed_scale;
 		play(p_animation, -1.0, speed, std::signbit(speed));
 	} else {
-		ERR_FAIL_COND_MSG(!animation_set.has(p_animation), vformat("Animation not found: %s.", p_animation));
+		ERR_FAIL_COND_MSG(!animation_set.has(p_animation), vformat("Animation not found: %s.", p_animation.operator String()));
 		playback.current.pos = 0;
 		playback.current.from = &animation_set[p_animation];
 		playback.current.start_time = -1;
@@ -611,7 +633,7 @@ void AnimationPlayer::set_assigned_animation(const String &p_animation) {
 	}
 }
 
-String AnimationPlayer::get_assigned_animation() const {
+StringName AnimationPlayer::get_assigned_animation() const {
 	return playback.assigned;
 }
 
@@ -745,7 +767,7 @@ bool AnimationPlayer::has_section() const {
 	return Animation::is_greater_or_equal_approx(playback.current.start_time, 0) || Animation::is_greater_or_equal_approx(playback.current.end_time, 0);
 }
 
-void AnimationPlayer::set_autoplay(const String &p_name) {
+void AnimationPlayer::set_autoplay(const StringName &p_name) {
 	if (is_inside_tree() && !Engine::get_singleton()->is_editor_hint()) {
 		WARN_PRINT("Setting autoplay after the node has been added to the scene has no effect.");
 	}
@@ -753,7 +775,7 @@ void AnimationPlayer::set_autoplay(const String &p_name) {
 	autoplay = p_name;
 }
 
-String AnimationPlayer::get_autoplay() const {
+StringName AnimationPlayer::get_autoplay() const {
 	return autoplay;
 }
 
@@ -768,16 +790,13 @@ bool AnimationPlayer::is_movie_quit_on_finish_enabled() const {
 void AnimationPlayer::_stop_internal(bool p_reset, bool p_keep_state) {
 	_clear_caches();
 	Playback &c = playback;
-	// c.blend.clear();
 	double start = c.current.from ? playback.current.get_start_time() : 0;
 	if (p_reset) {
 		c.blend.clear();
 		if (p_keep_state) {
 			c.current.pos = start;
 		} else {
-			is_stopping = true;
 			seek_internal(start, true, true, true);
-			is_stopping = false;
 		}
 		c.current.from = nullptr;
 		c.current.speed_scale = 1;
@@ -977,6 +996,7 @@ void AnimationPlayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("pause"), &AnimationPlayer::pause);
 	ClassDB::bind_method(D_METHOD("stop", "keep_state"), &AnimationPlayer::stop, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("is_playing"), &AnimationPlayer::is_playing);
+	ClassDB::bind_method(D_METHOD("is_animation_active"), &AnimationPlayer::is_valid);
 
 	ClassDB::bind_method(D_METHOD("set_current_animation", "animation"), &AnimationPlayer::set_current_animation);
 	ClassDB::bind_method(D_METHOD("get_current_animation"), &AnimationPlayer::get_current_animation);
@@ -1028,7 +1048,7 @@ void AnimationPlayer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "speed_scale", PROPERTY_HINT_RANGE, "-4,4,0.001,or_less,or_greater"), "set_speed_scale", "get_speed_scale");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "movie_quit_on_finish"), "set_movie_quit_on_finish_enabled", "is_movie_quit_on_finish_enabled");
 
-	ADD_SIGNAL(MethodInfo(SNAME("current_animation_changed"), PropertyInfo(Variant::STRING, "name")));
+	ADD_SIGNAL(MethodInfo(SNAME("current_animation_changed"), PropertyInfo(Variant::STRING_NAME, "name")));
 	ADD_SIGNAL(MethodInfo(SNAME("animation_changed"), PropertyInfo(Variant::STRING_NAME, "old_name"), PropertyInfo(Variant::STRING_NAME, "new_name")));
 }
 

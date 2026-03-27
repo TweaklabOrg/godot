@@ -506,7 +506,7 @@ Light3D::~Light3D() {
 	RS::get_singleton()->instance_set_base(get_instance(), RID());
 
 	if (light.is_valid()) {
-		RenderingServer::get_singleton()->free(light);
+		RenderingServer::get_singleton()->free_rid(light);
 	}
 }
 
@@ -552,7 +552,6 @@ void DirectionalLight3D::_validate_property(PropertyInfo &p_property) const {
 			p_property.usage = PROPERTY_USAGE_NO_EDITOR;
 		}
 	}
-
 	if (p_property.name == "light_size" || p_property.name == "light_projector") {
 		// Not implemented in DirectionalLight3D (`light_size` is replaced by `light_angular_distance`).
 		p_property.usage = PROPERTY_USAGE_NONE;

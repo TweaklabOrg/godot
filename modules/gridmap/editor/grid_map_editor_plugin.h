@@ -66,6 +66,7 @@ class GridMapEditor : public VBoxContainer {
 	};
 
 	InputAction input_action = INPUT_NONE;
+	bool valid_mb_press = false;
 	Panel *panel = nullptr;
 	MenuButton *options = nullptr;
 	SpinBox *floor = nullptr;
@@ -138,6 +139,7 @@ class GridMapEditor : public VBoxContainer {
 	};
 
 	LocalVector<ClipboardItem> clipboard_items;
+	bool clipboard_is_move = false;
 
 	Color default_color;
 	Color erase_color;
@@ -165,6 +167,7 @@ class GridMapEditor : public VBoxContainer {
 		Vector3 current;
 		Vector3 begin;
 		Vector3 end;
+		Vector3 distance_from_cursor;
 		int orientation = 0;
 	};
 	PasteIndicator paste_indicator;
@@ -173,6 +176,7 @@ class GridMapEditor : public VBoxContainer {
 	Transform3D cursor_transform;
 
 	Vector3 cursor_origin;
+	Vector3i cursor_gridpos;
 
 	int display_mode = DISPLAY_THUMBNAIL;
 	int selected_palette = -1;
@@ -194,7 +198,7 @@ class GridMapEditor : public VBoxContainer {
 		MENU_OPTION_CURSOR_CLEAR_ROTATION,
 		MENU_OPTION_PASTE_SELECTS,
 		MENU_OPTION_SELECTION_DUPLICATE,
-		MENU_OPTION_SELECTION_CUT,
+		MENU_OPTION_SELECTION_MOVE,
 		MENU_OPTION_SELECTION_CLEAR,
 		MENU_OPTION_SELECTION_FILL,
 		MENU_OPTION_GRIDMAP_SETTINGS
@@ -234,6 +238,7 @@ class GridMapEditor : public VBoxContainer {
 	void _set_clipboard_data();
 	void _update_paste_indicator();
 	void _do_paste();
+	void _cancel_pending_move();
 	void _show_viewports_transform_gizmo(bool p_value);
 	void _update_selection_transform();
 	void _validate_selection();
@@ -246,7 +251,9 @@ class GridMapEditor : public VBoxContainer {
 	void _floor_mouse_exited();
 
 	void _delete_selection();
+	void _delete_selection_with_undo();
 	void _fill_selection();
+	void _setup_paste_mode();
 
 	bool do_input_action(Camera3D *p_camera, const Point2 &p_point, bool p_click);
 

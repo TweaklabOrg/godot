@@ -96,7 +96,13 @@ void EditorDebuggerRemoteObjects::_get_property_list(List<PropertyInfo> *p_list)
 }
 
 void EditorDebuggerRemoteObjects::set_property_field(const StringName &p_property, const Variant &p_value, const String &p_field) {
-	_set_impl(p_property, p_value, p_field);
+	// Ignore the field with arrays and dictionaries, as they are passed whole when edited.
+	Variant::Type type = p_value.get_type();
+	if (type == Variant::ARRAY || type == Variant::DICTIONARY) {
+		_set_impl(p_property, p_value, "");
+	} else {
+		_set_impl(p_property, p_value, p_field);
+	}
 }
 
 String EditorDebuggerRemoteObjects::get_title() {
@@ -376,6 +382,10 @@ void EditorDebuggerInspector::add_stack_variable(const Array &p_array, int p_off
 			type = "Locals/";
 			break;
 		case 1:
+			if (n.begins_with("@")) {
+				return; // Skip groups.
+			}
+
 			type = "Members/";
 			break;
 		case 2:
